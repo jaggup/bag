@@ -1,41 +1,48 @@
-resource "aws_instance" "rns-ec2" {
-    ami          = "ami-06ee4e2261a4dc5c3"
-    instance_type= "t2.micro"
-    vpc_security_group_ids = [aws_security_group.instance.id]
+data "aws_ami" "aws_linux_2_latest" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*"]
+  }
+}
+
+resource "aws_instance" "webserver" {
+    ami          = data.aws_ami.aws_linux_2_latest.id
+    instance_type= var.instance_type
+    vpc_security_group_ids = [aws_security_group.webserver_sg.id]
 
     user_data = file("./scripts/install_httpd.sh")
 
-                 user_data_replace_on_change = true
+    user_data_replace_on_change = true
 
-    tags  =  {
-             Name= "web-server"
-             Env = "Development"
-    }
+    tags  =  var.custom_tags
 }
 
-resource "aws_security_group" "instance" {
-  name        = "ec2-example-instance"
+resource "aws_security_group" "webserver_sg" {
+  name        = "webserver sg"
+  description = "allow Http server traffic"
 
-  ingress {
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-  }
-  ingress {
-     from_port       = 22
-     to_port         = 22
-     protocol        = "tcp"
-     cidr_blocks     = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
+  dynamic "ingress" {
+      iterator = port
+      for_each = var.sg_ports
+      content {
+          description     = "Ingress Rule"
+          from_port        = port.value
+          to_port          = port.value
+          protocol         = "tcp"
+          cidr_blocks      = [var.cidr_blocks]
+      }
+}
+
+egress {
+     from_port       = var.egress_port
+     to_port         = var.egress_port
+     protocol        = "-1"
+     cidr_blocks     = [var.cidr_blocks]
   }
 
   tags = {
-    Name = "allow_tls"
+    Name = "webserver SG"
   }
 }

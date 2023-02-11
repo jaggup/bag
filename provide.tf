@@ -1,6 +1,3 @@
-#configure AWS credentials (provider-AWS)
-#choose the region (ap-north-1)
-
 terraform {
   required_providers {
     aws = {
@@ -12,5 +9,5 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  region = "ap-northeast-1"
+  region = var.region
 }
